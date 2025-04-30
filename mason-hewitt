@@ -1,0 +1,94 @@
+// var geometry = draw one!
+
+var hide = 0
+
+/////////////////////// DATA LAYERS ////////////////////////////////////
+var folder = "projects/glad/HLSDIST/current";
+var VEGDISTSTATUS = ee.ImageCollection(folder+"/VEG-DIST-STATUS").mosaic()
+
+/////////////////////// FILTER TO NLCD FORESTS ////////////////////////////////////
+var nlcd = ee.ImageCollection('USGS/NLCD_RELEASES/2021_REL/NLCD');
+var nlcd2021 = nlcd.filter(ee.Filter.eq('system:index', '2021')).first();
+var landcover = nlcd2021.select('landcover');
+var forest = landcover.eq(41).or(landcover.eq(42)).or(landcover.eq(43)).or(landcover.eq(90))
+
+/////////////////////// MASK VDS TO FORESTS //////////////////////////////////
+var VDS_FORESTS = VEGDISTSTATUS.updateMask(VEGDISTSTATUS.eq(6)).updateMask(forest.eq(1))
+var ellapal = ["121212","e01b07","897f4e","dee043","008888","e48727","e01b07","777777","dddddd"];
+//print(VDS_FORESTS)
+Map.addLayer(VDS_FORESTS,{min:0,max:8,palette:ellapal},'FOREST-DIST-STATUS');
+
+/////////////////////// EXPORT RASTER IN GEOMETRY //////////////////////////////////
+var projection = VDS_FORESTS.select('b1').projection().getInfo();
+Export.image.toDrive({
+  image: VDS_FORESTS,
+  description: 'export',
+  crs: projection.crs,
+  scale: 30,
+  //crsTransform: projection.transform,
+  region: geometry
+});
+
+/////////////////////// CHANGE BASEMAP IN VIEWER //////////////////////////////////
+var BlackAndWhite = [
+  {
+    featureType: 'administrative',
+    elementType: 'all',
+    stylers: [{visibility: 'off'}]
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#444444'}]
+  },
+  {
+    featureType: 'landscape',
+    elementType: 'all',
+    stylers: [{color: '#000000'}, {visibility: 'on'}]
+  },
+  {featureType: 'poi', elementType: 'all', stylers: [{visibility: 'off'}]}, {
+    featureType: 'road',
+    elementType: 'all',
+    stylers: [{saturation: -100}, {lightness: 45}]
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry.fill',
+    stylers: [{color: '#ffffff'}]
+  },
+  {
+    featureType: 'road',
+    elementType: 'geometry.stroke',
+    stylers: [{color: '#eaeaea'}]
+  },
+  {featureType: 'road', elementType: 'labels', stylers: [{visibility: 'off'}]},
+  {
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: [{color: '#dedede'}]
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.icon',
+    stylers: [{visibility: 'off'}]
+  },
+  {
+    featureType: 'road.highway',
+    elementType: 'all',
+    stylers: [{visibility: 'simplified'}]
+  },
+  {
+    featureType: 'road.arterial',
+    elementType: 'labels.icon',
+    stylers: [{visibility: 'off'}]
+  },
+  {featureType: 'transit', elementType: 'all', stylers: [{visibility: 'off'}]},
+  {
+    featureType: 'water',
+    elementType: 'all',
+    stylers: [{color: '#434343'}, {visibility: 'on'}]
+  }
+];
+
+Map.setOptions(
+    'BlackAndWhite', {BlackAndWhite: BlackAndWhite});
